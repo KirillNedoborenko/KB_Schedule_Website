@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum
 from django.contrib.auth.models import User
 
 class MainProject(models.Model):
@@ -24,6 +25,10 @@ class Project(models.Model):
 
     def __str__(self):
         return f"{self.pr_number} - {self.pr_name if self.pr_name else ''}"
+
+    def get_total_workload(self):
+        result = self.tasks.aggregate(total=Sum('workload'))['total']
+        return result if result else 0
 
 
 class Task(models.Model):

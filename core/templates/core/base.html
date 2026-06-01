@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Система Мониторинга КБ — Электронная книга</title>
+    <style>
+        /* Общие стили в духе Excel */
+        body { 
+            font-family: 'Segoe UI', Calibri, Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f3f2f1; /* Фирменный светло-серый фон Excel */
+            color: #323130;
+        }
+
+        /* Зеленая верхняя полоса (Строка формул / Меню) */
+        .excel-top-bar {
+            background-color: #107c41; /* Тот самый темно-зеленый цвет Excel */
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .excel-top-bar h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .user-info {
+            font-size: 13px;
+        }
+        .user-info a {
+            color: #fff;
+            margin-left: 15px;
+            text-decoration: underline;
+        }
+
+        /* РАБОЧАЯ ОБЛАСТЬ (ЛИСТ) */
+        .excel-sheet-container {
+            padding: 20px;
+            background-color: #ffffff;
+            margin: 15px;
+            border: 1px solid #d2d0ce;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-height: 400px;
+        }
+
+        /* НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК (КАК ЛИСТЫ В EXCEL) */
+        .excel-tabs-bar {
+            display: flex;
+            align-items: flex-end;
+            background-color: #e1dfdd; /* Серый фон панели листов */
+            padding: 0 15px;
+            border-top: 1px solid #d2d0ce;
+            border-bottom: 1px solid #d2d0ce;
+        }
+
+        /* Стиль самой вкладки-листа */
+        .excel-tab {
+            padding: 6px 20px;
+            font-size: 12px;
+            color: #323130;
+            text-decoration: none;
+            background-color: #f3f2f1;
+            border: 1px solid #d2d0ce;
+            border-bottom: none;
+            margin-right: 2px;
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+            position: relative;
+            top: 1px; /* Смещаем, чтобы перекрыть границу панели */
+            transition: background-color 0.1s;
+        }
+        .excel-tab:hover {
+            background-color: #eaeaea;
+        }
+
+        /* СТИЛЬ АКТИВНОЙ ВКЛАДКИ (ВЫБРАННЫЙ ЛИСТ) */
+        .excel-tab.active {
+            background-color: #ffffff; /* Белый фон, как у рабочего листа */
+            font-weight: bold;
+            color: #107c41; /* Зеленый текст */
+            border-top: 3px solid #107c41; /* Зеленая полоска сверху вкладки */
+            border-bottom: 1px solid #ffffff; /* Прячем нижнюю серую границу */
+            z-index: 2;
+        }
+        
+        .excel-tab-icon {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Верхняя зеленая плашка -->
+    <div class="excel-top-bar">
+        <h1>Конструкторское Бюро — Панель Управления</h1>
+        <div class="user-info">
+            <span>Пользователь: <strong>{{ request.user.username }}</strong></span>
+            <a href="/admin/">В админку</a>
+        </div>
+    </div>
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ ВКЛАДОК (ОТОБРАЖАЕТСЯ ТОЛЬКО ПОСЛЕ ЛОГИНА) -->
+    {% if request.user.is_authenticated %}
+        <div class="excel-tabs-bar">
+            <!-- 1. Этот лист вшит намертво — общедоступный график КБ -->
+            <a href="/" class="excel-tab {% if current_tab == 'global' %}active{% endif %}">
+                <span class="excel-tab-icon">📊</span>Общий график КБ
+            </a>
+            
+            <!-- 2. Динамические листы КИПов, которые прилетели из context_processor -->
+            {% for mp in available_tabs %}
+                <a href="{% url 'project_tab_detail' mp.mp_id %}" class="excel-tab {% if current_tab == mp.mp_id %}active{% endif %}">
+                    <span class="excel-tab-icon">📄</span>{{ mp.mp_name }}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Контейнер для содержимого активного листа -->
+    <div class="excel-sheet-container">
+        {% block tab_content %}
+        <!-- Сюда дочерние шаблоны вставят свой уникальный контент -->
+        {% endblock %}
+    </div>
+
+</body>
+</html>

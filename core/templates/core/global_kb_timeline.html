@@ -1,122 +1,123 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Глобальный график занятости КБ</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f6f9; }
-        h1 { color: #1e293b; margin-bottom: 5px; }
-        .info { margin-bottom: 25px; color: #64748b; font-size: 14px; }
-        
-        /* Главная табличная структура */
-        .matrix-table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
-        .matrix-table th, .matrix-table td { border: 1px solid #e2e8f0; padding: 15px; vertical-align: middle; }
-        
-        /* Столбец сотрудников (Ось Y) */
-        .user-name { font-weight: bold; color: #334155; background-color: #f8fafc; width: 18%; }
-        .timeline-cell { width: 82%; padding: 10px !important; }
-        
-        /* Шапка с датами (Ось X) */
-        .header-bg { background-color: #0f172a; color: white; font-weight: 600; text-align: center; }
-        
-        /* Контейнер-сетка для дат в шапке */
-        .date-grid-header {
-            display: grid;
-            /* Автоматически создает одинаковые колонки по числу дней */
-            grid-template-columns: repeat({{ total_days }}, minmax(40px, 1fr));
-            width: 100%;
-            text-align: center;
-            font-size: 11px;
-        }
-        .date-cell {
-            padding: 5px 0;
-            border-right: 1px solid #334155;
-            color: #94a3b8;
-        }
-        .date-cell:last-child { border-right: none; }
-        .date-cell strong { color: white; display: block; font-size: 13px; }
+{% extends "core/base.html" %}
 
-        /* Контейнер оси X для полосок */
-        .track-container { 
-            position: relative; 
-            width: 100%; 
-            height: 45px; 
-            background-color: #f8fafc; 
-            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px);
-            /* Рисует фоновую сетку дней, чтобы полоски было видно точнее */
-            background-size: calc(100% / {{ total_days }}) 100%;
-            border-radius: 6px; 
-            border: 1px solid #e2e8f0;
-        }
+{% block tab_content %}
+<style>
+    /* Уникальные стили сетки и полосок для первого листа */
+    .info { 
+        margin-bottom: 15px; 
+        color: #64748b; 
+        font-size: 13px; 
+    }
+    .matrix-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        background: white; 
+        border: 1px solid #d2d0ce; 
+    }
+    .matrix-table th, .matrix-table td { 
+        border: 1px solid #d2d0ce; 
+        padding: 12px; 
+        vertical-align: middle; 
+    }
+    .header-bg { 
+        background-color: #f3f2f1; 
+        color: #323130; 
+        font-weight: bold; 
+        text-align: center; 
+        font-size: 13px; 
+    }
+    .user-name { 
+        font-weight: bold; 
+        color: #334155; 
+        background-color: #fdfdfd; 
+        width: 15%; 
+    }
+    .track-container { 
+        position: relative; 
+        width: 100%; 
+        height: 40px; 
+        background-color: #ffffff; 
+        background-image: linear-gradient(to right, #f3f2f1 1px, transparent 1px);
+        background-size: calc(100% / {{ total_days }}) 100%;
+        border: 1px solid #e2e8f0;
+        border-radius: 3px;
+    }
+    .bar { 
+        position: absolute; 
+        height: 80%; 
+        top: 10%; 
+        background: linear-gradient(135deg, #107c41, #0b592e); /* Фирменный зеленый цвет полосок КБ */
+        color: white; 
+        font-size: 11px; 
+        font-weight: 500; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        border-radius: 2px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+        white-space: nowrap; 
+        padding: 0 4px; 
+    }
+    .bar .sub-text { 
+        font-size: 9px; 
+        opacity: 0.8; 
+    }
+    .date-grid-header { 
+        display: grid; 
+        grid-template-columns: repeat({{ total_days }}, minmax(35px, 1fr)); 
+        width: 100%; 
+        text-align: center; 
+        font-size: 11px; 
+    }
+    .date-cell { 
+        color: #323130; 
+        border-right: 1px solid #d2d0ce; 
+    }
+    .date-cell:last-child { 
+        border-right: none; 
+    }
+</style>
 
-        /* Полоски задач */
-        .bar { 
-            position: absolute; 
-            height: 80%; 
-            top: 10%;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            color: white; 
-            font-size: 11px; 
-            font-weight: 500; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            border-radius: 4px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            white-space: nowrap; 
-            padding: 0 4px; 
-        }
-        .bar .sub-text { font-size: 9px; opacity: 0.8; }
-    </style>
-</head>
-<body>
+<div class="info">
+    Календарный период загрузки КБ: с <strong>{{ min_date|date:"d.m.Y" }}</strong> по <strong>{{ max_date|date:"d.m.Y" }}</strong> (Всего дней: {{ total_days }})
+</div>
 
-    <h1>📋 Глобальный график загрузки сотрудников КБ</h1>
-    <div class="info">
-        Календарный период сформирован по задачам КБ: с <strong>{{ min_date|date:"d.m.Y" }}</strong> по <strong>{{ max_date|date:"d.m.Y" }}</strong> (Всего дней: {{ total_days }})
-    </div>
-
-    <table class="matrix-table">
-        <thead>
-            <tr>
-                <th class="header-bg" style="width: 18%;">Сотрудник (Ось Y)</th>
-                <th class="header-bg" style="width: 82%; padding: 5px;">
-                    <!-- Сетка дат вместо старого текста -->
-                    <div class="date-grid-header">
-                        {% for date in all_dates %}
-                            <div class="date-cell">
-                                <strong>{{ date|date:"d" }}</strong>{{ date|date:"m" }}
+<table class="matrix-table">
+    <thead>
+        <tr>
+            <th class="header-bg" style="width: 15%;">Сотрудник (Ось Y)</th>
+            <th class="header-bg" style="width: 85%; padding: 5px;">
+                <div class="date-grid-header">
+                    {% for date in all_dates %}
+                        <div class="date-cell">
+                            <strong>{{ date|date:"d" }}</strong><br>{{ date|date:"m" }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user_name, chunks in timeline_by_user.items %}
+        <tr>
+            <td class="user-name">👤 {{ user_name }}</td>
+            <td>
+                <div class="track-container">
+                    {% for chunk in chunks %}
+                        {% if chunk.is_active %}
+                            <div class="bar" style="left: {{ chunk.left }}%; width: {{ chunk.width }}%;" title="Проект: {{ chunk.project_name }} | Задача: {{ chunk.task_name }}">
+                                <span>{{ chunk.task_name }}</span>
+                                <span class="sub-text">[{{ chunk.project_name }}]</span>
                             </div>
-                        {% endfor %}
-                    </div>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user_name, chunks in timeline_by_user.items %}
-            <tr>
-                <td class="user-name">👤 {{ user_name }}</td>
-                <td class="timeline-cell">
-                    <div class="track-container">
-                        {% for chunk in chunks %}
-                            {% if chunk.is_active %}
-                                <div class="bar" style="left: {{ chunk.left }}%; width: {{ chunk.width }}%;" title="Проект: {{ chunk.project_name }} | Задача: {{ chunk.task_name }}">
-                                    <span>{{ chunk.task_name }}</span>
-                                    <span class="sub-text">[{{ chunk.project_name }}]</span>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <p style="margin-top: 25px;"><a href="/admin/" style="color: #3b82f6; text-decoration: none; font-weight: 500;">➔ Перейти в админку для управления людьми и задачами</a></p>
-
-</body>
-</html>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

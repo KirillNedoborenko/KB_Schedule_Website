@@ -6,23 +6,6 @@ from .models import MainProject,Task
 from datetime import datetime,timedelta
 
 @login_required
-def main_project_detail(request, mp_id):
-    main_project = get_object_or_404(MainProject, mp_id=mp_id)
-
-    if not request.user.is_superuser and request.user not in main_project.allowed_users.all():
-        raise PermissionDenied("У вас нет прав доступа к этому КИПУ")
-    
-    sub_projects = main_project.projects.all()
-
-    tasks = Task.objects.filter(project__main__project=main_project).select_related('holder','project')
-
-    return render(request, 'core/project_detail.html', {
-        'main_project': main_project,
-        'sub_projects': sub_projects,
-        'tasks': tasks
-    })
-
-@login_required
 def global_kb_Schedule(request):
     users_set = User.objects.filter(is_superuser=False).order_by('username')
     tasks_set = Task.objects.all().select_related('holder','project__main_project')
@@ -143,3 +126,20 @@ def global_kb_Schedule(request):
         'total_days': total_days,
     })
 
+@login_required
+def main_project_detail(request, mp_id):
+    main_project = get_object_or_404(MainProject, mp_id=mp_id)
+
+    if not request.user.is_superuser and not request.user.has_perm('core.view_all_main_projects') \
+       and request.user not in main_project.allowed_Users.all():
+       raise PermissionError("У вас нет прав доступа к этой вкладке")
+
+    sub_projects = main_project.projects.all()
+    tasks = Task.objects.filter(project__main_project=main_project).select_related('holder','project')
+
+    return render(request, 'core/project_detail.html',{
+        'main_project': main_project,
+        'sub_projects': sub_projects,
+        'tasks': tasks,
+        'current_tab': main_project.mp_id
+    })

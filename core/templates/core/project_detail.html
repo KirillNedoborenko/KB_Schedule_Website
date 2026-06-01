@@ -1,0 +1,99 @@
+{% extends "core/base.html" %}
+
+{% block tab_content %}
+    <style>
+        .KIP-TABLE {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            font-family: calibri, Arial,sans-serif;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        .KIP-TABLE th, .KIP-TABLE td {
+            border: 2px solid #a1a09f;
+            padding: 6px 10px;
+            vertical-align: middle;
+            color: #000000;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .KIP-TABLE tr:hover td {
+            background-color: #a1a09f !important;
+            color: #323130 !important;
+        }
+    </style>
+
+    <table class="KIP-TABLE">
+        <thead>
+            <tr>
+                <th>№ проекта</th>
+                <th>Наименование</th>
+                <th>Обьём, м. кв.</th>
+                <th>Статус проекта</th>
+                <th>№</th>
+                <th>Наименование задачи</th>
+                <th>Трудоёмкость, дней</th>
+                <th>Исполнитель</th>
+                <th>Дата постановки задачи</th>
+                <th>Срок выполнения</th>
+                <th>Примечание</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td colspan="11" style="text-align: center; font-weight: bold; background: #228B22;">
+                    Обьект: {{main_project.mp_name}}
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="11" style="text-align: center; font-weight: bold; background: #FFA500;">
+                    Руководитель проекта: ФИО
+                </td>
+            </tr>
+
+            {% for project in sub_projects %}
+                {% for task in project.tasks.all %}
+                    <tr>
+                        {% if forloop.first %}
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_number}}</td>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_name}}</td>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.volume|default:"-"}}</td>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.status}}</td>
+                        {% endif %}
+
+                        <td>{{forloop.counter}}</td>
+                        <td>{{task.task_name}}</td>
+                        <td>{{task.workload|floatformat:0}}</td>
+                        <td>{{task.holder.username|default:"Не назначен"}}</td>
+                        <td>{{task.start_date|date:"d.m.Y"}}</td>
+                        <td>{{task.end_date|date:"d.m.Y"}}</td>
+                        <td>{{task.task_comment|default:""}}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td>{{ project.pr_number }}</td>
+                        <td>{{ project.pr_name }}</td>
+                        <td>{{ project.volume|default:"-" }}</td>
+                        <td>{{ project.status }}</td>
+                        <td colspan="7">
+                            Итого по основным задачам: 0.00
+                        </td>
+                    </tr>
+                {% endfor %}
+                
+                {% if project.tasks.count > 0 %}
+                    <tr>
+                        <td colspan="7">
+                                Итого по основным задачам: {{project.get_total_workload}}
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
