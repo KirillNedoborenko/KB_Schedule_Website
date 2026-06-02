@@ -26,6 +26,7 @@
         }
     </style>
 
+    {% csrf_token %}
     <table class="KIP-TABLE">
         <thead>
             <tr>
@@ -60,10 +61,10 @@
                 {% for task in project.tasks.all %}
                     <tr>
                         {% if forloop.first %}
-                            <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_number}}</td>
-                            <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_name}}</td>
-                            <td rowspan="{{project.tasks.count|add:1}}">{{project.volume|default:"-"}}</td>
-                            <td rowspan="{{project.tasks.count|add:1}}">{{project.status}}</td>
+                            <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_number}}</td>
+                            <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_name}}</td>
+                            <td rowspan="{{project.tasks.count|add:2}}">{{project.volume|default:"-"}}</td>
+                            <td rowspan="{{project.tasks.count|add:2}}">{{project.status}}</td>
                         {% endif %}
 
                         <td>{{forloop.counter}}</td>
@@ -92,8 +93,156 @@
                                 Итого по основным задачам: {{project.get_total_workload}}
                         </td>
                     </tr>
+                    <tr style="background-color: #ffffff;" id="new_project_row">
+                        <td>
+                            <button type="button" id="add_task_button" current_project_id="{{project.pr_id}}">
+                                ➕ Добавить задачу в {{project.pr_name }}
+                            </button>
+                        </td>
+                        <td contenteditable="True" id="new_t_name" placeholder="Наименование новой задачи"></td>
+                        <td contenteditable="True" id="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
+                        <td contenteditable="True" id="new_t_holder" placeholder="Исполнитель новой задачи"></td>
+                        <td contenteditable="True" id="new_t_start_date" placeholder="Дата постановки новой задачи"></td>
+                        <td contenteditable="True" id="new_t_end_date" placeholder="Срок выполнения новой задачи"></td>
+                        <td contenteditable="True" id="new_t_comment" placeholder="Комментарий новой задачи"></td>
+                    </tr>
                 {% endif %}
             {% endfor %}
+            <tr style="background-color: #ffffff;" id="new_project_row">
+                <td contenteditable="True" id="new_pr_number" placeholder="Номер нового проекта"></td>
+                <td contenteditable="True" id="new_pr_name" placeholder="Наименование нового проекта"></td>
+                <td contenteditable="True" id="new_pr_volume" placeholder="Обьём нового проекта"></td>
+                <td contenteditable="True" id="new_pr_status" placeholder="Статус нового проекта"></td>
+                <td colspan="7">
+                    <button type="button" id="add_project_button">
+                        ➕ Добавить подпроект в {{ main_project.mp_name }}
+                    </button>
+                </td>
+            </tr>
         </tbody>
     </table>
+
+    <script>
+        function getCookie(name){
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== ''){
+                const cookies = document.cookie.split(";");
+
+                for (let i = 0; i < cookies.length; i++){
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0,name.length + 1)===(name + '=')){
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        document.getElementById('add_project_button').addEventListener('click',function(){
+            let prNumber = document.getElementById('new_pr_number').innerText.trim();
+            let prName = document.getElementById('new_pr_name').innerText.trim();
+            let prVolume = document.getElementById('new_pr_volume').innerText.trim();
+            let prStatus = document.getElementById('new_pr_status').innerText.trim();
+
+            if (!prNumber || !prName){
+                alert("Пожалуйста,заполните номер и наименование нового проекта!");
+                return;
+            }
+
+            let request_data = {
+                main_project_id: "{{main_project.mp_id}}",
+                pr_number: prNumber,
+                pr_name: prName,
+                volume: prVolume,
+                status: prStatus
+            };
+
+            fetch("{% url 'create_sub_project' %}",{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(request_data)
+            })
+            .then(response => {
+                if (!response.ok){
+                    return response.text().then(htmlText=>{
+                        let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                        let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                        throw new Error(errorHint);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success'){
+                    window.location.reload();
+                } else {
+                    alert("Ошибка django: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:',error);
+                alert("не удалось связаться с сервером." + error.message)
+            })
+        });
+
+        document.getElementById('add_task_button').addEventListener('click',function(){
+            let prId = this.getAttribute('current_project_id');
+
+            let tName = document.getElementById('new_t_name').innerText.trim();
+            let tWorkload = document.getElementById('new_t_workload').innerText.trim();
+            let tHolder = document.getElementById('new_t_holder').innerText.trim();
+            let tStart = document.getElementById('new_t_start_date').innerText.trim();
+            let tEnd = document.getElementById('new_t_end_date').innerText.trim();
+            let tComment = document.getElementById('new_t_comment').innerText.trim();
+
+            if (!tName || !tStart){
+                alert("Пожалуйста,заполните наименование и дату постановки новой задачи!");
+                return;
+            }
+
+            let request_data = {
+                project_id: prId,
+                task_name: tName,
+                workload: tWorkload,
+                holder: tHolder,
+                start_date: tStart,
+                end_date: tEnd,
+                task_comment: tComment
+            };
+
+            fetch("{% url 'create_new_task' %}",{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(request_data)
+            })
+            .then(response => {
+                if (!response.ok){
+                    return response.text().then(htmlText=>{
+                        let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                        let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                        throw new Error(errorHint);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success'){
+                    window.location.reload();
+                } else {
+                    alert("Ошибка django: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:',error);
+                alert("не удалось связаться с сервером." + error.message)
+            })
+        });
+    </script>
 {% endblock %}

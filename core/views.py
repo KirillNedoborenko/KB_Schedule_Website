@@ -1,9 +1,12 @@
+import json
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
-from .models import MainProject,Task
+from .models import MainProject,Task,Project
 from datetime import datetime,timedelta
+import traceback
 
 @login_required
 def global_kb_Schedule(request):
@@ -143,3 +146,110 @@ def main_project_detail(request, mp_id):
         'tasks': tasks,
         'current_tab': main_project.mp_id
     })
+
+@login_required
+def create_sub_project(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            mp_id = data.get('main_project_id')
+            pr_number = data.get('pr_number','').strip()
+            pr_name = data.get('pr_name','').strip()
+            volume = data.get('volume','').strip()
+            status = data.get('status','').strip()
+
+            if not pr_number or not pr_name:
+                return JsonResponse({'status': 'error','message': 'Номер и наименование проекта обязательны!!!'},status=400)
+
+            main_project = get_object_or_404(MainProject, mp_id=mp_id)
+            volume_decimal = float(volume) if volume else None
+
+            new_project = Project.objects.create(
+                main_project=main_project,
+                pr_number=pr_number,
+                pr_name=pr_name,
+                volume=volume_decimal,
+                status=status if status else "В работе"
+            )
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Проект успешно добавлен!',
+                'project_id': new_project.pr_id
+            })
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print("КРАШ НА БЭКЕНДЕ:", error_msg) # Напечатает в терминал
+            traceback.print_exc()               # Выведет лог со строкой в терминал
+            
+            # Возвращаем статус 200, чтобы JavaScript гарантированно ПРОЧИТАЛ эту ошибку,
+            # а не выкидывал стандартную заглушку 500!
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
+
+    return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
+
+@login_required
+def create_new_task(request):
+    date_template = "%d.%m.%Y"
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            project_id = data.get('project_id')
+            project = get_object_or_404(Project,pr_id=project_id)
+            main_project = project.main_project
+
+            if not request.user.is_superuser and request.user not in main_project.allowed_Users.all():
+                return JsonResponse({'status': 'error','message': 'Попытка подмены данных.Доступ запрещён!!!'},status=300)
+
+            new_holder = data.get('holder','').strip()
+            new_start_date = data.get('start_date','').strip()
+            new_end_date = data.get('end_date','').strip()
+            new_workload = data.get('workload','').strip()
+            new_task_name = data.get('task_name','').strip()
+            new_task_comment = data.get('task_comment','').strip()
+
+            try:
+                new_holder = User.objects.get(username=new_holder) if new_holder else None
+            except User.DoesNotExist:
+                return JsonResponse({'status': 'error','message': 'Такого пользователя не существует!!!'},status=600)
+            
+            try:
+                new_start_date = datetime.strptime(new_start_date,date_template) if new_start_date else None
+            except ValueError:
+                return JsonResponse({'status': 'error','message': 'Неверная дата постановки задачи!!!'},status=100)
+
+            try:
+                new_end_date = datetime.strptime(new_end_date,date_template) if new_end_date else None
+            except ValueError:
+                return JsonResponse({'status': 'error','message': 'Неверная дата срока выполнения!!!'},status=100)
+            
+            try:
+                new_workload = float(new_workload) if new_workload else 0.0
+            except ValueError:
+                return JsonResponse({'status': 'error','message': 'Неверное значение трудоёмкости!!!'},status=100)
+
+            if not new_start_date or not new_task_name:
+                return JsonResponse({'status': 'error','message': 'наименование и начальная дата задачи обязательны!!!'},status=200)
+
+            new_task = Task.objects.create(
+                project=project,
+                holder=new_holder,
+                start_date=new_start_date,
+                end_date=new_end_date,
+                workload=new_workload,
+                task_name=new_task_name,
+                task_comment=new_task_comment
+            )
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Проект успешно добавлен!',
+                'task_id': new_task.task_id
+            })
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print("КРАШ НА БЭКЕНДЕ:", error_msg) 
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
+
+    return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
