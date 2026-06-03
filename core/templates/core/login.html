@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Авторизация - система управления КБ</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Calibri, sans-serif;
+                background-color: #f3f2f1;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+            .login-card {
+                background: white;
+                padding: 30px;
+                border-radius: 4px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+                width: 350px;
+                border-top: 5px solid #107c41;
+            }
+            .login-card h2 {
+                margin-top: 0;
+                color: #323130;
+                font-size: 20px;
+                text-align: center;
+                margin-bottom: 25px;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            .form-group label {
+                display: block;
+                margin-bottom: 6px;
+                color: #555;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .form-group input {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid #a19f9d;
+                border-radius: 3px;
+                box-sizing: border-box;
+                font-size: 14px;
+            }
+            .form-group input:focus {
+                border-color: #107c41;
+                outline: none;
+            }
+            .btn-submit {
+                width: 100%;
+                padding: 10px;
+                background-color: #107c41;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 14px;
+            }
+            .btn-submit:hover {
+                background-color: #0b5930;
+            }
+            .error-msg {
+                color: #a80005;
+                background-color: #fde7e9;
+                padding: 10px;
+                border-radius: 3px;
+                font-size: 13px;
+                margin-bottom: 15px;
+                text-align: center;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="login-card">
+            <h2>Вход в систему КБ</h2>
+            
+            <!-- Форма отправки данных -->
+            <form method="post" action="{% url 'login_user' %}">
+                {% csrf_token %} <!-- Твоя любимая каноническая защита -->
+                
+                <!-- Вывод ошибок, если ввели неверный логин/пароль -->
+                {% if error %}
+                    <div class="error-msg">{{ error }}</div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="username">Имя пользователя (Логин)</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" class="btn-submit">Войти в систему</button>
+            </form>
+        </div>
+    </body>
+
+</html>

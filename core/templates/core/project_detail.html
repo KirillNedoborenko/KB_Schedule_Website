@@ -41,70 +41,158 @@
                 <th>Дата постановки задачи</th>
                 <th>Срок выполнения</th>
                 <th>Примечание</th>
+                <th>Удаление задач</th>
             </tr>
         </thead>
 
         <tbody>
             <tr>
-                <td colspan="11" style="text-align: center; font-weight: bold; background: #228B22;">
+                <td colspan="12" style="text-align: center; font-weight: bold; background: #228B22;">
                     Обьект: {{main_project.mp_name}}
                 </td>
             </tr>
 
             <tr>
-                <td colspan="11" style="text-align: center; font-weight: bold; background: #FFA500;">
+                <td colspan="12" style="text-align: center; font-weight: bold; background: #FFA500;">
                     Руководитель проекта: ФИО
                 </td>
             </tr>
 
             {% for project in sub_projects %}
-                {% for task in project.tasks.all %}
+                {% for task in project.tasks.all|dictsort:"task_id" %}
+
                     <tr>
                         {% if forloop.first %}
                             <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_number}}</td>
                             <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_name}}</td>
-                            <td rowspan="{{project.tasks.count|add:2}}">{{project.volume|default:"-"}}</td>
-                            <td rowspan="{{project.tasks.count|add:2}}">{{project.status}}</td>
+                            <td rowspan="{{project.tasks.count|add:2}}" 
+                                contenteditable="True"
+                                class="project_cell"
+                                project_id="{{project.pr_id}}"
+                                data_field="volume">
+                                {{project.volume|default:"-"}}
+                            </td>
+                            <td rowspan="{{project.tasks.count|add:2}}" 
+                                contenteditable="True"
+                                class="project_cell"
+                                project_id="{{project.pr_id}}"
+                                data_field="status">
+                                {{project.status}}
+                            </td>
                         {% endif %}
 
-                        <td>{{forloop.counter}}</td>
-                        <td>{{task.task_name}}</td>
-                        <td>{{task.workload|floatformat:0}}</td>
-                        <td>{{task.holder.username|default:"Не назначен"}}</td>
-                        <td>{{task.start_date|date:"d.m.Y"}}</td>
-                        <td>{{task.end_date|date:"d.m.Y"}}</td>
-                        <td>{{task.task_comment|default:""}}</td>
+                        <td>
+                            {{forloop.counter}}
+                        </td>
+                        <td contenteditable="True"
+                            class="task_cell"
+                            task_id="{{task.task_id}}"
+                            data_field="task_name">
+                            {{task.task_name}}
+                        </td>
+                        <td contenteditable="True"
+                            class="task_cell"
+                            task_id="{{task.task_id}}"
+                            data_field="workload">
+                            {{task.workload|floatformat:0}}
+                        </td>
+                        <td>
+                            {{task.holder.username|default:"Не назначен"}}
+                        </td>
+                        <td>
+                            {{task.start_date|date:"d.m.Y"}}
+                        </td>
+                        <td>
+                            {{task.end_date|date:"d.m.Y"}}
+                        </td>
+                        <td contenteditable="True"
+                            class="task_cell"
+                            task_id="{{task.task_id}}"
+                            data_field="task_comment">
+                            {{task.task_comment|default:""}}
+                        </td>
+
+                        <td>
+                            {% if task.holder == request.user or request.user.is_superuser %}
+                                <button type="button" class="delete_task_button" current_task_id="{{task.task_id}}" current_task_name="{{task.task_name}}">
+                                ❌ Удалить задачу {{task.task_name}}
+                                </button>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td>{{ project.pr_number }}</td>
-                        <td>{{ project.pr_name }}</td>
-                        <td>{{ project.volume|default:"-" }}</td>
-                        <td>{{ project.status }}</td>
-                        <td colspan="7">
+                        <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_number}}</td>
+                        <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_name}}</td>
+                        <td rowspan="{{project.tasks.count|add:2}}">{{project.volume|default:"-"}}</td>
+                        <td rowspan="{{project.tasks.count|add:2}}">{{project.status}}</td>
+                        <td colspan="6">
                             Итого по основным задачам: 0.00
                         </td>
+                        <td colspan="2">
+                            {% if user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," %}
+                                <button type="button" class="delete_project_button" current_project_id="{{project.pr_id}}" 
+                                                                                    current_project_number="{{project.pr_number}}" 
+                                                                                    current_project_name="{{project.pr_number}}">
+                                ❌ Удалить проект {{project.pr_number}}({{project.pr_name}})
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <tr style="background-color: #ffffff;" class="task_input_row">
+                        <td>
+                            <button type="button" class="add_task_button" current_project_id="{{project.pr_id}}">
+                                ➕ Добавить задачу в {{project.pr_name}}
+                            </button>
+                        </td>
+                        <td contenteditable="True" class="new_t_name" placeholder="Наименование новой задачи"></td>
+                        <td contenteditable="True" class="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
+                        <td>{{request.user.username}}</td>
+                        <td>
+                            <input type="date" class="new_t_start_date">
+                        </td>
+                        <td>
+                            <input type="date" class="new_t_end_date">
+                        </td>
+                        <td contenteditable="True" class="new_t_comment" placeholder="Комментарий новой задачи"></td>
+                        <td></td>
                     </tr>
                 {% endfor %}
                 
                 {% if project.tasks.count > 0 %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="6">
                                 Итого по основным задачам: {{project.get_total_workload}}
                         </td>
+        
+                        <td colspan="2">
+                            {% if user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," %}
+                                <button type="button" class="delete_project_button" current_project_id="{{project.pr_id}}" 
+                                                                                    current_project_number="{{project.pr_number}}" 
+                                                                                    current_project_name="{{project.pr_number}}">
+                                ❌ Удалить проект {{project.pr_number}}({{project.pr_name}})
+                                </button>
+                            {% endif %}
+                        </td>
                     </tr>
-                    <tr style="background-color: #ffffff;" id="new_project_row">
+                    <tr style="background-color: #ffffff;" class="task_input_row">
                         <td>
-                            <button type="button" id="add_task_button" current_project_id="{{project.pr_id}}">
-                                ➕ Добавить задачу в {{project.pr_name }}
+                            <button type="button" class="add_task_button" current_project_id="{{project.pr_id}}">
+                                ➕ Добавить задачу в {{project.pr_name}}
                             </button>
                         </td>
-                        <td contenteditable="True" id="new_t_name" placeholder="Наименование новой задачи"></td>
-                        <td contenteditable="True" id="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
-                        <td contenteditable="True" id="new_t_holder" placeholder="Исполнитель новой задачи"></td>
-                        <td contenteditable="True" id="new_t_start_date" placeholder="Дата постановки новой задачи"></td>
-                        <td contenteditable="True" id="new_t_end_date" placeholder="Срок выполнения новой задачи"></td>
-                        <td contenteditable="True" id="new_t_comment" placeholder="Комментарий новой задачи"></td>
+                        <td contenteditable="True" class="new_t_name" placeholder="Наименование новой задачи"></td>
+                        <td contenteditable="True" class="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
+                        <td>{{request.user.username}}</td>
+                        <td>
+                            <input type="date" class="new_t_start_date">
+                        </td>
+                        <td>
+                            <input type="date" class="new_t_end_date">
+                        </td>
+                        <td contenteditable="True" class="new_t_comment" placeholder="Комментарий новой задачи"></td>
+                        <td></td>
                     </tr>
                 {% endif %}
             {% endfor %}
@@ -118,6 +206,7 @@
                         ➕ Добавить подпроект в {{ main_project.mp_name }}
                     </button>
                 </td>
+                <td></td>
             </tr>
         </tbody>
     </table>
@@ -189,60 +278,246 @@
             })
         });
 
-        document.getElementById('add_task_button').addEventListener('click',function(){
-            let prId = this.getAttribute('current_project_id');
+        document.querySelectorAll('.add_task_button').forEach(button => {
+            button.addEventListener('click',function(e){
+                e.preventDefault();
+                let prId = this.getAttribute('current_project_id');
 
-            let tName = document.getElementById('new_t_name').innerText.trim();
-            let tWorkload = document.getElementById('new_t_workload').innerText.trim();
-            let tHolder = document.getElementById('new_t_holder').innerText.trim();
-            let tStart = document.getElementById('new_t_start_date').innerText.trim();
-            let tEnd = document.getElementById('new_t_end_date').innerText.trim();
-            let tComment = document.getElementById('new_t_comment').innerText.trim();
+                let currentRow = this.closest('.task_input_row')
 
-            if (!tName || !tStart){
-                alert("Пожалуйста,заполните наименование и дату постановки новой задачи!");
-                return;
-            }
-
-            let request_data = {
-                project_id: prId,
-                task_name: tName,
-                workload: tWorkload,
-                holder: tHolder,
-                start_date: tStart,
-                end_date: tEnd,
-                task_comment: tComment
-            };
-
-            fetch("{% url 'create_new_task' %}",{
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify(request_data)
-            })
-            .then(response => {
-                if (!response.ok){
-                    return response.text().then(htmlText=>{
-                        let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
-                        let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
-                        throw new Error(errorHint);
-                    });
+                let tName = currentRow.querySelector('.new_t_name').innerText.trim();
+                let tWorkload = currentRow.querySelector('.new_t_workload').innerText.trim();
+                let tStart = currentRow.querySelector('.new_t_start_date').value;
+                let tEnd = currentRow.querySelector('.new_t_end_date').value;
+                
+                if (tStart){
+                    let parts = tStart.split('-');
+                    tStart = `${parts[2]}.${parts[1]}.${parts[0]}`
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success'){
-                    window.location.reload();
-                } else {
-                    alert("Ошибка django: " + data.message);
+
+                if (tEnd){
+                    let parts = tEnd.split('-');
+                    tEnd = `${parts[2]}.${parts[1]}.${parts[0]}`
                 }
-            })
-            .catch(error => {
-                console.error('Ошибка:',error);
-                alert("не удалось связаться с сервером." + error.message)
-            })
+                
+                let tComment = currentRow.querySelector('.new_t_comment').innerText.trim();
+
+                if (!tName || !tStart){
+                    alert("Пожалуйста,заполните наименование и дату постановки новой задачи!");
+                    return;
+                }
+
+                let request_data = {
+                    project_id: prId,
+                    task_name: tName,
+                    workload: tWorkload,
+                    holder: "{{request.user.username}}",
+                    start_date: tStart,
+                    end_date: tEnd,
+                    task_comment: tComment
+                };
+
+                fetch("{% url 'create_new_task' %}",{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(request_data)
+                })
+                .then(response => {
+                    if (!response.ok){
+                        return response.text().then(htmlText=>{
+                            let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                            let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                            throw new Error(errorHint);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success'){
+                        window.location.reload();
+                    } else {
+                        alert("Ошибка django: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:',error);
+                    alert("не удалось связаться с сервером." + error.message)
+                });
+            });
+        });
+
+        document.querySelectorAll('.delete_task_button').forEach(button => {
+            button.addEventListener('click',function(){
+                let taskId = this.getAttribute('current_task_id');
+                let taskName = this.getAttribute('current_task_name');
+
+                if (!confirm(`Вы точно уверены,что хотите удалить задачу ${taskName} из базы КБ?`)){
+                    return;
+                }
+
+                fetch("{% url 'delete_task' %}",{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ task_id: taskId })
+                })
+                .then(response => {
+                    if (!response.ok){
+                        return response.text().then(htmlText=>{
+                            let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                            let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                            throw new Error(errorHint);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success'){
+                        window.location.reload();
+                    } else {
+                        alert("Ошибка django: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:',error);
+                    alert("не удалось связаться с сервером." + error.message)
+                });
+            });
+        });
+
+        document.querySelectorAll('.delete_project_button').forEach(button => {
+            button.addEventListener('click',function(){
+                let prId = this.getAttribute('current_project_id');
+                let prNumber = this.getAttribute('current_project_number');
+                let prName = this.getAttribute('current_project_name');
+
+                if (!confirm(`Вы точно уверены,что хотите удалить проект ${prNumber} с именем (${prName})?`)){
+                    return;
+                }
+
+                fetch("{% url 'delete_project' %}",{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ project_id: prId })
+                })
+                .then(response => {
+                    if (!response.ok){
+                        return response.text().then(htmlText=>{
+                            let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                            let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                            throw new Error(errorHint);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success'){
+                        window.location.reload();
+                    } else {
+                        alert("Ошибка django: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:',error);
+                    alert("не удалось связаться с сервером." + error.message)
+                });
+            });
+        });
+
+        document.querySelectorAll('.task_cell').forEach(cell => {
+            cell.addEventListener('blur',function(){
+                let task_id = this.getAttribute('task_id');
+                let field_name = this.getAttribute('data_field');
+                let new_value = this.innerText.trim();
+
+                let request_data = {
+                    task_id: task_id,
+                    field: field_name,
+                    value: new_value
+                };
+
+                fetch("{% url 'update_task' %}",{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(request_data)
+                })
+                .then(response => {
+                    if (!response.ok){
+                        return response.text().then(htmlText=>{
+                            let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                            let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                            throw new Error(errorHint);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success'){
+                        window.location.reload();
+                    } else {
+                        alert("Ошибка django: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:',error);
+                    alert("не удалось связаться с сервером." + error.message)
+                });
+            });
+        });
+
+        document.querySelectorAll('.project_cell').forEach(cell => {
+            cell.addEventListener('blur',function(){
+                let project_id = this.getAttribute('project_id');
+                let field_name = this.getAttribute('data_field');
+                let new_value = this.innerText.trim();
+
+                let request_data = {
+                    project_id: project_id,
+                    field: field_name,
+                    value: new_value
+                };
+
+                fetch("{% url 'update_project' %}",{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(request_data)
+                })
+                .then(response => {
+                    if (!response.ok){
+                        return response.text().then(htmlText=>{
+                            let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                            let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                            throw new Error(errorHint);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success'){
+                        window.location.reload();
+                    } else {
+                        alert("Ошибка django: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:',error);
+                    alert("не удалось связаться с сервером." + error.message)
+                });
+            });
         });
     </script>
 {% endblock %}

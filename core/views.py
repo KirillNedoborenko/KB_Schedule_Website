@@ -6,10 +6,21 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from .models import MainProject,Task,Project
 from datetime import datetime,timedelta
+from django.contrib.auth import authenticate,login,logout
+from django.shortcuts import render, redirect
 import traceback
 
 @login_required
 def global_kb_Schedule(request):
+    is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+    if request.user.is_superuser:
+        user_projects = MainProject.objects.all()
+    else:
+        user_projects = MainProject.objects.filter(allowed_Users=request.user)
+
+    if not user_projects.exists():
+        return redirect('dashboard')
+    
     users_set = User.objects.filter(is_superuser=False).order_by('username')
     tasks_set = Task.objects.all().select_related('holder','project__main_project')
 
@@ -244,7 +255,7 @@ def create_new_task(request):
 
             return JsonResponse({
                 'status': 'success',
-                'message': 'Проект успешно добавлен!',
+                'message': 'Задача успешно добавлена!',
                 'task_id': new_task.task_id
             })
         except Exception as e:
@@ -253,3 +264,186 @@ def create_new_task(request):
             return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
 
     return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
+
+@login_required
+def delete_task(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+
+            task = get_object_or_404(Task,task_id=task_id)
+
+            if task.holder != request.user and not request.user.is_superuser:
+                return JsonResponse({
+                        'status': 'error',
+                        'message': 'Попытка подмены данных!Вы можете удалять только свои задачи'
+                    },
+                    status=300
+                )
+        
+            task.delete()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Задача успешно удалена!'
+            })
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print("КРАШ НА БЭКЕНДЕ:", error_msg)
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
+ 
+    return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
+
+@login_required
+def delete_project(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            project_id = data.get('project_id')
+
+            project = get_object_or_404(Project,pr_id=project_id)
+
+            is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+
+            if not is_kb_boss and not request.user.is_superuser:
+                return JsonResponse({
+                        'status': 'error',
+                        'message': 'Попытка подмены данных!Вы можете удалять только свои задачи'
+                    },
+                    status=300
+                )
+        
+            project.delete()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Проект успешно удалён!'
+            })
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print("КРАШ НА БЭКЕНДЕ:", error_msg)
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
+ 
+    return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
+
+@login_required
+def update_task(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+            field_name = data.get('field')
+            new_value = data.get('value')
+
+            task = get_object_or_404(Task,task_id=task_id)
+
+            is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+
+            if task.holder != request.user and not request.user.is_superuser and not is_kb_boss:
+                return JsonResponse({
+                        'status': 'error',
+                        'message': 'Попытка подмены данных!Вы можете модифицировать только свои задачи!'
+                    },
+                    status=300
+                )
+        
+            if field_name== 'workload':
+                try:
+                    new_value = float(new_value) if new_value else 0.0
+                except ValueError:
+                    return JsonResponse({'status': 'error','message': 'Неверная трудоёмкость!!!'},status=100)
+            else:
+                if field_name == 'task_name' and not new_value:
+                    return JsonResponse({'status': 'error','message': 'Наименование задачи не может быть пустым!!!'},status=100)
+            
+            setattr(task, field_name,new_value)
+            task.save()
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Данные успешно сохранены!'
+            })
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print("КРАШ НА БЭКЕНДЕ:", error_msg)
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
+ 
+    return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
+
+@login_required
+def update_project(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            project_id = data.get('project_id')
+            field_name = data.get('field')
+            new_value = data.get('value')
+
+            project = get_object_or_404(Project,pr_id=project_id)
+
+            is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+
+            if not request.user.is_superuser and not is_kb_boss:
+                return JsonResponse({
+                        'status': 'error',
+                        'message': 'Попытка подмены данных!Вы не имеете прав на редактирование проекта!'
+                    },
+                    status=300
+                )
+        
+            if field_name== 'volume':
+                try:
+                    new_value = float(new_value) if new_value else 0.0
+                except ValueError:
+                    return JsonResponse({'status': 'error','message': 'Неверный обьём!!!'},status=100)
+            else:
+                if field_name == 'status' and not new_value:
+                    return JsonResponse({'status': 'error','message': 'Неверный статус!!!'},status=100)
+            
+            setattr(project, field_name,new_value)
+            project.save()
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Данные успешно сохранены!'
+            })
+
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            print("КРАШ НА БЭКЕНДЕ:", error_msg)
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=200)
+ 
+    return JsonResponse({'status': 'error','message': 'Неверный метод запроса!!!'},status=400)
+
+def login_user(request):
+    if request.user.is_authenticated:
+        return redirect('global_timeline')
+    
+    error = None
+
+    if request.method == 'POST':
+        username_input = request.POST.get('username','').strip()
+        password_input = request.POST.get('password','')
+
+        user = authenticate(request,username=username_input,password=password_input)
+
+        if user is not None:
+            if user.is_active:
+                login(request,user)
+                return redirect('global_kb_timeline')
+            else:
+                error = "Ваша учетная запись заблокирована!!!"
+        
+        else:
+            error = "Неверное имя пользователя или пароль!"
+
+    return render(request, 'core/login.html',{'error': error})
+
+def logout_user(request):
+    logout(request)
+    return redirect('login_user')
+
+def dashboard_view(request):
+    return render(request,'core/dashboard.html')

@@ -1,0 +1,78 @@
+{% extends "core/base.html" %}
+
+{% block tab_content %}
+<style>
+    body {
+        font-family: 'Segoe UI', Calibri, sans-serif;
+        background-color: #f3f2f1;
+        margin: 0;
+        padding: 0;
+    }
+    .header {
+        background-color: #107c41;
+        color: white;
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header h1 { margin: 0; font-size: 20px; }
+    .container {
+        max-width: 800px;
+        margin: 100px auto;
+        text-align: center;
+        background: white;
+        padding: 5px 50px 50px 50px;
+        border-radius: 4px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+    .welcome-title {
+        color: #323130;
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    .btn-create-mp {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #107c41;
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 3px;
+        font-size: 15px;
+        margin-top: 20px;
+        transition: background-color 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn-create-mp:hover { background-color: #0b5930; }
+    .logout-link { color: #fde7e9; text-decoration: none; font-weight: bold; }
+</style>
+
+<div class="header">
+    <h1>Система автоматизации КБ</h1>
+    <div>
+        Вы зашли как: <strong>{{ request.user.username }}</strong> | 
+        <a href="{% url 'logout_user' %}" class="logout-link">🚪 Выйти</a>
+    </div>
+</div>
+
+<div class="container">
+    <h2 class="welcome-title">Добро пожаловать в систему администрирования КБ</h2>
+    
+    {% if request.user.is_superuser or 'Начальники КБ' in request.user.groups.all|join:"," %}
+        <p style="color: #605e5c; font-size: 14px; margin-bottom: 25px;">
+            В базе данных сейчас нет активных Главных проектов или КИП был удалён. Создайте новый стартовый проект:
+        </p>
+        <!-- Ссылка на создание КИПа (пока сделаем её в админку, завтра перепишем на AJAX) -->
+        <a href="/admin/core/mainproject/add/" class="btn-create-mp">
+            ➕ Создать Главный проект (КИП)
+        </a>
+    {% else %}
+        <p style="color: #a19f9d; font-size: 14px; font-style: italic;">
+            Для просмотра графиков обратитесь к Руководству КБ для назначения вас в команду проекта.
+        </p>
+    {% endif %}
+</div>
+{% endblock %}
