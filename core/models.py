@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 class MainProject(models.Model):
     mp_id = models.AutoField(primary_key=True)
     mp_name = models.TextField(verbose_name="Название КИПА")
+    gip = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name='gip_projects',verbose_name="ГИП")
 
     allowed_Users = models.ManyToManyField(User,related_name="allowed_main_projects",
                                            blank=True,verbose_name = "Доступ сотрудников")
@@ -43,6 +44,10 @@ class Task(models.Model):
     workload = models.DecimalField(max_digits=10,decimal_places=2,null=True,
                                    blank=True,verbose_name="Трудоёмкость")
     task_name = models.TextField(verbose_name="Название задачи")
+    possible_status = [('Выдано','Выдано'),
+                       ('В работе','В работе'),
+                       ('Выполнено','Выполнено')]
+    status = models.CharField(max_length=20,choices=possible_status,default='Выдано',verbose_name = 'Статус задачи')
     task_comment = models.TextField(null=True,blank=True,verbose_name="Комментарий")
 
     def __str__(self):

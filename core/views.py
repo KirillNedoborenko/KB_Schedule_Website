@@ -12,7 +12,7 @@ import traceback
 
 @login_required
 def global_kb_Schedule(request):
-    is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+    is_kb_boss = request.user.groups.filter(name='Руководители КБ').exists()
     if request.user.is_superuser:
         user_projects = MainProject.objects.all()
     else:
@@ -274,7 +274,9 @@ def delete_task(request):
 
             task = get_object_or_404(Task,task_id=task_id)
 
-            if task.holder != request.user and not request.user.is_superuser:
+            is_kb_boss = request.user.groups.filter(name='Руководители КБ').exists()
+
+            if not request.user.is_superuser and not is_kb_boss:
                 return JsonResponse({
                         'status': 'error',
                         'message': 'Попытка подмены данных!Вы можете удалять только свои задачи'
@@ -305,7 +307,7 @@ def delete_project(request):
 
             project = get_object_or_404(Project,pr_id=project_id)
 
-            is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+            is_kb_boss = request.user.groups.filter(name='Руководители КБ').exists()
 
             if not is_kb_boss and not request.user.is_superuser:
                 return JsonResponse({
@@ -340,9 +342,11 @@ def update_task(request):
 
             task = get_object_or_404(Task,task_id=task_id)
 
-            is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+            is_kb_boss = request.user.groups.filter(name='Руководители КБ').exists()
 
-            if task.holder != request.user and not request.user.is_superuser and not is_kb_boss:
+            main_project = task.project.main_project
+
+            if task.holder != request.user and not request.user.is_superuser and not is_kb_boss and request.user != main_project.gip:
                 return JsonResponse({
                         'status': 'error',
                         'message': 'Попытка подмены данных!Вы можете модифицировать только свои задачи!'
@@ -384,7 +388,7 @@ def update_project(request):
 
             project = get_object_or_404(Project,pr_id=project_id)
 
-            is_kb_boss = request.user.groups.filter(name='Начальники КБ').exists()
+            is_kb_boss = request.user.groups.filter(name='Руководители КБ').exists()
 
             if not request.user.is_superuser and not is_kb_boss:
                 return JsonResponse({
@@ -419,7 +423,7 @@ def update_project(request):
 
 def login_user(request):
     if request.user.is_authenticated:
-        return redirect('global_timeline')
+        return redirect('global_kb_timeline')
     
     error = None
 

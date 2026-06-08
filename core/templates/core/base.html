@@ -45,6 +45,10 @@
             border: 1px solid #d2d0ce;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             min-height: 400px;
+
+            display: inline-block;
+            min-width: calc(100% - 72px);
+            box-sizing: border-box;
         }
 
         /* НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК (КАК ЛИСТЫ В EXCEL) */
@@ -55,6 +59,24 @@
             padding: 0 15px;
             border-top: 1px solid #d2d0ce;
             border-bottom: 1px solid #d2d0ce;
+
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            scroll-behavior: smooth;
+        }
+
+        .excel-tabs-bar::-webkit-scrollbar{
+            height: 4px;
+        }
+
+        .excel-tabs-bar::-webkit-scrollbar-track{
+            background: #e1dfdd;
+        }
+
+        .excel-tabs-bar::-webkit-scrollbar-thumb{
+            background: #107c41;
+            border-radius: 2px;
         }
 
         /* Стиль самой вкладки-листа */
@@ -72,6 +94,8 @@
             position: relative;
             top: 1px; /* Смещаем, чтобы перекрыть границу панели */
             transition: background-color 0.1s;
+
+            flex-shrink: 0;
         }
         .excel-tab:hover {
             background-color: #eaeaea;
@@ -93,39 +117,46 @@
     </style>
 </head>
 <body>
+    <div style="display: inline-block; min-width: 100%; box-sizing: border-box; vertical-align: top;">
+        <!-- Верхняя зеленая плашка -->
+        <div class="excel-top-bar">
+            <h1>Конструкторское Бюро — Панель Управления</h1>
+            <div class="user-info">
+                <span>Пользователь: <strong>{{ request.user.username }}</strong></span>
+                
+                {% if request.user.is_superuser %}
+                    <a href="/admin/">В админку</a>
+                {% endif %}
 
-    <!-- Верхняя зеленая плашка -->
-    <div class="excel-top-bar">
-        <h1>Конструкторское Бюро — Панель Управления</h1>
-        <div class="user-info">
-            <span>Пользователь: <strong>{{ request.user.username }}</strong></span>
-            <a href="/admin/">В админку</a>
-        </div>
-    </div>
-
-    <!-- ВЕРХНЯЯ ПАНЕЛЬ ВКЛАДОК (ОТОБРАЖАЕТСЯ ТОЛЬКО ПОСЛЕ ЛОГИНА) -->
-    {% if request.user.is_authenticated %}
-        <div class="excel-tabs-bar">
-            <!-- 1. Этот лист вшит намертво — общедоступный график КБ -->
-            <a href="/" class="excel-tab {% if current_tab == 'global' %}active{% endif %}">
-                <span class="excel-tab-icon">📊</span>Общий график КБ
-            </a>
-            
-            <!-- 2. Динамические листы КИПов, которые прилетели из context_processor -->
-            {% for mp in available_tabs %}
-                <a href="{% url 'project_tab_detail' mp.mp_id %}" class="excel-tab {% if current_tab == mp.mp_id %}active{% endif %}">
-                    <span class="excel-tab-icon">📄</span>{{ mp.mp_name }}
+                <a href="{% url 'logout_user' %}" class="logout_button">
+                    🚪 Выйти из системы
                 </a>
-            {% endfor %}
+            </div>
         </div>
-    {% endif %}
 
-    <!-- Контейнер для содержимого активного листа -->
-    <div class="excel-sheet-container">
-        {% block tab_content %}
-        <!-- Сюда дочерние шаблоны вставят свой уникальный контент -->
-        {% endblock %}
+        <!-- ВЕРХНЯЯ ПАНЕЛЬ ВКЛАДОК (ОТОБРАЖАЕТСЯ ТОЛЬКО ПОСЛЕ ЛОГИНА) -->
+        {% if request.user.is_authenticated %}
+            <div class="excel-tabs-bar">
+                <!-- 1. Этот лист вшит намертво — общедоступный график КБ -->
+                <a href="/" class="excel-tab {% if current_tab == 'global' %}active{% endif %}">
+                    <span class="excel-tab-icon">📊</span>Общий график КБ
+                </a>
+                
+                <!-- 2. Динамические листы КИПов, которые прилетели из context_processor -->
+                {% for mp in available_tabs %}
+                    <a href="{% url 'project_tab_detail' mp.mp_id %}" class="excel-tab {% if current_tab == mp.mp_id %}active{% endif %}">
+                        <span class="excel-tab-icon">📄</span>{{ mp.mp_name }}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Контейнер для содержимого активного листа -->
+        <div class="excel-sheet-container">
+            {% block tab_content %}
+            <!-- Сюда дочерние шаблоны вставят свой уникальный контент -->
+            {% endblock %}
+        </div>
     </div>
-
 </body>
 </html>

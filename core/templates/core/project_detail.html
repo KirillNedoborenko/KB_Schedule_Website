@@ -28,187 +28,287 @@
 
     {% csrf_token %}
     <table class="KIP-TABLE">
-        <thead>
-            <tr>
-                <th>№ проекта</th>
-                <th>Наименование</th>
-                <th>Обьём, м. кв.</th>
-                <th>Статус проекта</th>
-                <th>№</th>
-                <th>Наименование задачи</th>
-                <th>Трудоёмкость, дней</th>
-                <th>Исполнитель</th>
-                <th>Дата постановки задачи</th>
-                <th>Срок выполнения</th>
-                <th>Примечание</th>
-                <th>Удаление задач</th>
-            </tr>
-        </thead>
+        {% if request.user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," or request.user == main_project.gip %}
+            <thead>
+                <tr>
+                    <th>№ проекта</th>
+                    <th>Наименование</th>
+                    <th>Обьём, м. кв.</th>
+                    <th>Статус проекта</th>
+                    <th>№</th>
+                    <th>Наименование задачи</th>
+                    <th>Трудоёмкость, дней</th>
+                    <th>Исполнитель</th>
+                    <th>Дата постановки задачи</th>
+                    <th>Срок выполнения</th>
+                    <th>Статус задачи</th>
+                    <th>Примечание</th>
+                    <th>Удаление задач</th>
+                </tr>
+            </thead>
 
-        <tbody>
-            <tr>
-                <td colspan="12" style="text-align: center; font-weight: bold; background: #228B22;">
-                    Обьект: {{main_project.mp_name}}
-                </td>
-            </tr>
+            <tbody>
+                <tr>
+                    <td colspan="13" style="text-align: center; font-weight: bold; background: #228B22;">
+                        Обьект: {{main_project.mp_name}}
+                    </td>
+                </tr>
 
-            <tr>
-                <td colspan="12" style="text-align: center; font-weight: bold; background: #FFA500;">
-                    Руководитель проекта: ФИО
-                </td>
-            </tr>
+                <tr>
+                    <td colspan="13" style="text-align: center; font-weight: bold; background: #FFA500;">
+                        Руководитель проекта: ФИО
+                    </td>
+                </tr>
 
-            {% for project in sub_projects %}
-                {% for task in project.tasks.all|dictsort:"task_id" %}
+                {% for project in sub_projects %}
+                    {% for task in project.tasks.all|dictsort:"task_id" %}
 
-                    <tr>
-                        {% if forloop.first %}
+                        <tr>
+                            {% if forloop.first %}
+                                <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_number}}</td>
+                                <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_name}}</td>
+                                <td rowspan="{{project.tasks.count|add:2}}" 
+                                    contenteditable="True"
+                                    class="project_cell"
+                                    project_id="{{project.pr_id}}"
+                                    data_field="volume">
+                                    {{project.volume|default:"-"}}
+                                </td>
+                                <td rowspan="{{project.tasks.count|add:2}}" 
+                                    contenteditable="True"
+                                    class="project_cell"
+                                    project_id="{{project.pr_id}}"
+                                    data_field="status">
+                                    {{project.status}}
+                                </td>
+                            {% endif %}
+
+                            <td>
+                                {{forloop.counter}}
+                            </td>
+                            <td contenteditable="True"
+                                class="task_cell"
+                                task_id="{{task.task_id}}"
+                                data_field="task_name">
+                                {{task.task_name}}
+                            </td>
+                            <td contenteditable="True"
+                                class="task_cell"
+                                task_id="{{task.task_id}}"
+                                data_field="workload">
+                                {{task.workload|floatformat:0}}
+                            </td>
+                            <td>
+                                {{task.holder.username|default:"Не назначен"}}
+                            </td>
+                            <td>
+                                {{task.start_date|date:"d.m.Y"}}
+                            </td>
+                            <td>
+                                {{task.end_date|date:"d.m.Y"}}
+                            </td>
+                            <td>
+                                <select class="task_status_select" task_id="{{ task.task_id }}" style="width: 100%; padding: 4px; font-weight: bold; font-family: calibri, sans-serif;">
+                                    <option value="Выдано" {% if task.status == "Выдано" %}selected{% endif %}>Выдано</option>
+                                    <option value="В работе" {% if task.status == "В работе" %}selected{% endif %}>В работе</option>
+                                    <option value="Выполнено" {% if task.status == "Выполнено" %}selected{% endif %}>Выполнено</option>
+                                </select>
+                            </td>
+                            <td contenteditable="True"
+                                class="task_cell"
+                                task_id="{{task.task_id}}"
+                                data_field="task_comment">
+                                {{task.task_comment|default:""}}
+                            </td>
+
+                            <td>
+                                {% if task.holder == request.user or request.user.is_superuser %}
+                                    <button type="button" class="delete_task_button" current_task_id="{{task.task_id}}" current_task_name="{{task.task_name}}">
+                                    ❌ Удалить задачу {{task.task_name}}
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
                             <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_number}}</td>
                             <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_name}}</td>
-                            <td rowspan="{{project.tasks.count|add:2}}" 
-                                contenteditable="True"
-                                class="project_cell"
-                                project_id="{{project.pr_id}}"
-                                data_field="volume">
-                                {{project.volume|default:"-"}}
+                            <td rowspan="{{project.tasks.count|add:2}}">{{project.volume|default:"-"}}</td>
+                            <td rowspan="{{project.tasks.count|add:2}}">{{project.status}}</td>
+                            <td colspan="8">
+                                Итого по основным задачам: 0.00
                             </td>
-                            <td rowspan="{{project.tasks.count|add:2}}" 
-                                contenteditable="True"
-                                class="project_cell"
-                                project_id="{{project.pr_id}}"
-                                data_field="status">
-                                {{project.status}}
+                            <td colspan="2">
+                                {% if user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," %}
+                                    <button type="button" class="delete_project_button" current_project_id="{{project.pr_id}}" 
+                                                                                        current_project_number="{{project.pr_number}}" 
+                                                                                        current_project_name="{{project.pr_number}}">
+                                    ❌ Удалить проект {{project.pr_number}}({{project.pr_name}})
+                                    </button>
+                                {% endif %}
                             </td>
-                        {% endif %}
+                        </tr>
 
-                        <td>
-                            {{forloop.counter}}
-                        </td>
-                        <td contenteditable="True"
-                            class="task_cell"
-                            task_id="{{task.task_id}}"
-                            data_field="task_name">
-                            {{task.task_name}}
-                        </td>
-                        <td contenteditable="True"
-                            class="task_cell"
-                            task_id="{{task.task_id}}"
-                            data_field="workload">
-                            {{task.workload|floatformat:0}}
-                        </td>
-                        <td>
-                            {{task.holder.username|default:"Не назначен"}}
-                        </td>
-                        <td>
-                            {{task.start_date|date:"d.m.Y"}}
-                        </td>
-                        <td>
-                            {{task.end_date|date:"d.m.Y"}}
-                        </td>
-                        <td contenteditable="True"
-                            class="task_cell"
-                            task_id="{{task.task_id}}"
-                            data_field="task_comment">
-                            {{task.task_comment|default:""}}
-                        </td>
-
-                        <td>
-                            {% if task.holder == request.user or request.user.is_superuser %}
-                                <button type="button" class="delete_task_button" current_task_id="{{task.task_id}}" current_task_name="{{task.task_name}}">
-                                ❌ Удалить задачу {{task.task_name}}
+                        <tr style="background-color: #ffffff;" class="task_input_row">
+                            <td>
+                                <button type="button" class="add_task_button" current_project_id="{{project.pr_id}}">
+                                    ➕ Добавить задачу в {{project.pr_name}}
                                 </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_number}}</td>
-                        <td rowspan="{{project.tasks.count|add:2}}">{{project.pr_name}}</td>
-                        <td rowspan="{{project.tasks.count|add:2}}">{{project.volume|default:"-"}}</td>
-                        <td rowspan="{{project.tasks.count|add:2}}">{{project.status}}</td>
-                        <td colspan="6">
-                            Итого по основным задачам: 0.00
-                        </td>
-                        <td colspan="2">
-                            {% if user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," %}
-                                <button type="button" class="delete_project_button" current_project_id="{{project.pr_id}}" 
-                                                                                    current_project_number="{{project.pr_number}}" 
-                                                                                    current_project_name="{{project.pr_number}}">
-                                ❌ Удалить проект {{project.pr_number}}({{project.pr_name}})
+                            </td>
+                            <td contenteditable="True" class="new_t_name" placeholder="Наименование новой задачи"></td>
+                            <td contenteditable="True" class="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
+                            <td>{{request.user.username}}</td>
+                            <td>
+                                <input type="date" class="new_t_start_date">
+                            </td>
+                            <td>
+                                <input type="date" class="new_t_end_date">
+                            </td>
+                            <td contenteditable="True" class="new_t_status" placeholder="Статус новой задачи"></td>
+                            <td contenteditable="True" class="new_t_comment" placeholder="Комментарий новой задачи"></td>
+                            <td></td>
+                        </tr>
+                    {% endfor %}
+                    
+                    {% if project.tasks.count > 0 %}
+                        <tr>
+                            <td colspan="8">
+                                    Итого по основным задачам: {{project.get_total_workload}}
+                            </td>
+            
+                            <td colspan="2">
+                                {% if user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," %}
+                                    <button type="button" class="delete_project_button" current_project_id="{{project.pr_id}}" 
+                                                                                        current_project_number="{{project.pr_number}}" 
+                                                                                        current_project_name="{{project.pr_number}}">
+                                    ❌ Удалить проект {{project.pr_number}}({{project.pr_name}})
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr style="background-color: #ffffff;" class="task_input_row">
+                            <td>
+                                <button type="button" class="add_task_button" current_project_id="{{project.pr_id}}">
+                                    ➕ Добавить задачу в {{project.pr_name}}
                                 </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-
-                    <tr style="background-color: #ffffff;" class="task_input_row">
-                        <td>
-                            <button type="button" class="add_task_button" current_project_id="{{project.pr_id}}">
-                                ➕ Добавить задачу в {{project.pr_name}}
-                            </button>
-                        </td>
-                        <td contenteditable="True" class="new_t_name" placeholder="Наименование новой задачи"></td>
-                        <td contenteditable="True" class="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
-                        <td>{{request.user.username}}</td>
-                        <td>
-                            <input type="date" class="new_t_start_date">
-                        </td>
-                        <td>
-                            <input type="date" class="new_t_end_date">
-                        </td>
-                        <td contenteditable="True" class="new_t_comment" placeholder="Комментарий новой задачи"></td>
-                        <td></td>
-                    </tr>
+                            </td>
+                            <td contenteditable="True" class="new_t_name" placeholder="Наименование новой задачи"></td>
+                            <td contenteditable="True" class="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
+                            <td>{{request.user.username}}</td>
+                            <td>
+                                <input type="date" class="new_t_start_date">
+                            </td>
+                            <td>
+                                <input type="date" class="new_t_end_date">
+                            </td>
+                            <td contenteditable="True" class="new_t_status" placeholder="Статус новой задачи"></td>
+                            <td contenteditable="True" class="new_t_comment" placeholder="Комментарий новой задачи"></td>
+                            <td></td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
-                
-                {% if project.tasks.count > 0 %}
-                    <tr>
-                        <td colspan="6">
-                                Итого по основным задачам: {{project.get_total_workload}}
-                        </td>
-        
-                        <td colspan="2">
-                            {% if user.is_superuser or 'Руководители КБ' in request.user.groups.all|join:"," %}
-                                <button type="button" class="delete_project_button" current_project_id="{{project.pr_id}}" 
-                                                                                    current_project_number="{{project.pr_number}}" 
-                                                                                    current_project_name="{{project.pr_number}}">
-                                ❌ Удалить проект {{project.pr_number}}({{project.pr_name}})
-                                </button>
+                <tr style="background-color: #ffffff;" id="new_project_row">
+                    <td contenteditable="True" id="new_pr_number" placeholder="Номер нового проекта"></td>
+                    <td contenteditable="True" id="new_pr_name" placeholder="Наименование нового проекта"></td>
+                    <td contenteditable="True" id="new_pr_volume" placeholder="Обьём нового проекта"></td>
+                    
+                    <select class="task_status_select" task_id="{{ task.task_id }}" style="width: 100%; padding: 4px; font-weight: bold; font-family: calibri, sans-serif;">
+                        <option value="Выдано" {% if task.status == "Выдано" %}selected{% endif %}>Выдано</option>
+                        <option value="В работе" {% if task.status == "В работе" %}selected{% endif %}>В работе</option>
+                        <option value="Выполнено" {% if task.status == "Выполнено" %}selected{% endif %}>Выполнено</option>
+                    </select>
+
+                    <td colspan="9">
+                        <button type="button" id="add_project_button">
+                            ➕ Добавить подпроект в {{ main_project.mp_name }}
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        {% else %}
+            <thead>
+                <tr>
+                    <th>№ проекта</th>
+                    <th>Наименование</th>
+                    <th>Обьём, м. кв.</th>
+                    <th>Статус проекта</th>
+                    <th>№</th>
+                    <th>Наименование задачи</th>
+                    <th>Трудоёмкость, дней</th>
+                    <th>Исполнитель</th>
+                    <th>Дата постановки задачи</th>
+                    <th>Срок выполнения</th>
+                    <th>Статус задачи</th>
+                    <th>Примечание</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td colspan="12" style="text-align: center; font-weight: bold; background: #228B22;">
+                        Обьект: {{main_project.mp_name}}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="12" style="text-align: center; font-weight: bold; background: #FFA500;">
+                        Руководитель проекта: ФИО
+                    </td>
+                </tr>
+
+                {% for project in sub_projects %}
+                    {% for task in project.tasks.all|dictsort:"task_id" %}
+                        <tr>
+                            {% if forloop.first %}
+                                <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_number}}</td>
+                                <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_name}}</td>
+                                <td rowspan="{{project.tasks.count|add:1}}">{{project.volume|default:"-"}}</td>
+                                <td rowspan="{{project.tasks.count|add:1}}">{{project.status}}</td>
                             {% endif %}
-                        </td>
-                    </tr>
-                    <tr style="background-color: #ffffff;" class="task_input_row">
-                        <td>
-                            <button type="button" class="add_task_button" current_project_id="{{project.pr_id}}">
-                                ➕ Добавить задачу в {{project.pr_name}}
-                            </button>
-                        </td>
-                        <td contenteditable="True" class="new_t_name" placeholder="Наименование новой задачи"></td>
-                        <td contenteditable="True" class="new_t_workload" placeholder="Трудоёмкость новой задачи"></td>
-                        <td>{{request.user.username}}</td>
-                        <td>
-                            <input type="date" class="new_t_start_date">
-                        </td>
-                        <td>
-                            <input type="date" class="new_t_end_date">
-                        </td>
-                        <td contenteditable="True" class="new_t_comment" placeholder="Комментарий новой задачи"></td>
-                        <td></td>
-                    </tr>
-                {% endif %}
-            {% endfor %}
-            <tr style="background-color: #ffffff;" id="new_project_row">
-                <td contenteditable="True" id="new_pr_number" placeholder="Номер нового проекта"></td>
-                <td contenteditable="True" id="new_pr_name" placeholder="Наименование нового проекта"></td>
-                <td contenteditable="True" id="new_pr_volume" placeholder="Обьём нового проекта"></td>
-                <td contenteditable="True" id="new_pr_status" placeholder="Статус нового проекта"></td>
-                <td colspan="7">
-                    <button type="button" id="add_project_button">
-                        ➕ Добавить подпроект в {{ main_project.mp_name }}
-                    </button>
-                </td>
-                <td></td>
-            </tr>
-        </tbody>
+
+                            <td>{{forloop.counter}}</td>
+                            <td>{{task.task_name}}</td>
+                            <td>{{task.workload|floatformat:0}}</td>
+                            <td>{{task.holder.username|default:"Не назначен"}}</td>
+                            <td>{{task.start_date|date:"d.m.Y"}}</td>
+                            <td>{{task.end_date|date:"d.m.Y"}}</td>
+                            
+                            <td>
+                                {% if request.user == task.holder %}
+                                    <select class="task_status_select" task_id="{{ task.task_id }}" style="width: 100%; padding: 4px; font-weight: bold; font-family: calibri, sans-serif;">
+                                        <option value="Выдано" {% if task.status == "Выдано" %}selected{% endif %}>Выдано</option>
+                                        <option value="В работе" {% if task.status == "В работе" %}selected{% endif %}>В работе</option>
+                                        <option value="Выполнено" {% if task.status == "Выполнено" %}selected{% endif %}>Выполнено</option>
+                                    </select>
+                                {% else %}
+                                    {{task.status}}
+                                {% endif %}
+                            </td>
+
+                            <td>{{task.task_comment|default:""}}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_number}}</td>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.pr_name}}</td>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.volume|default:"-"}}</td>
+                            <td rowspan="{{project.tasks.count|add:1}}">{{project.status}}</td>
+                            <td colspan="8">
+                                Итого по основным задачам: 0.00
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    
+                    {% if project.tasks.count > 0 %}
+                        <tr>
+                            <td colspan="8">
+                                    Итого по основным задачам: {{project.get_total_workload}}
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        {% endif %}
     </table>
 
     <script>
@@ -228,7 +328,7 @@
             return cookieValue;
         }
 
-        document.getElementById('add_project_button').addEventListener('click',function(){
+        document.getElementById('add_project_button')?.addEventListener('click',function(){
             let prNumber = document.getElementById('new_pr_number').innerText.trim();
             let prName = document.getElementById('new_pr_name').innerText.trim();
             let prVolume = document.getElementById('new_pr_volume').innerText.trim();
@@ -489,6 +589,49 @@
                 };
 
                 fetch("{% url 'update_project' %}",{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(request_data)
+                })
+                .then(response => {
+                    if (!response.ok){
+                        return response.text().then(htmlText=>{
+                            let match = htmlText.match(/<td><pre>([\s\S]*?)<\/pre><\/td>/) || htmlText.match(/<title>([\s\S]*?)<\/title>/);
+                            let errorHint = match ? match[1] : "Неизвестная ошибка HTML 500";
+                            throw new Error(errorHint);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success'){
+                        window.location.reload();
+                    } else {
+                        alert("Ошибка django: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:',error);
+                    alert("не удалось связаться с сервером." + error.message)
+                });
+            });
+        });
+
+        document.querySelectorAll('.task_status_select').forEach(cell => {
+            cell.addEventListener('change',function(){
+                let task_id = this.getAttribute('task_id');
+                let new_value = this.value;
+
+                let request_data = {
+                    task_id: task_id,
+                    field: 'status',
+                    value: new_value
+                };
+
+                fetch("{% url 'update_task' %}",{
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
